@@ -1,25 +1,53 @@
 package com.enterprise.sdlcdevops.service;
 
 import com.enterprise.sdlcdevops.entity.Documentation;
+import com.enterprise.sdlcdevops.entity.Task;
 import com.enterprise.sdlcdevops.repository.DocumentationRepository;
+import com.enterprise.sdlcdevops.repository.TaskRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class DocumentationService {
 
     private final DocumentationRepository documentationRepository;
+    private final TaskRepository taskRepository;
 
     public DocumentationService(
-            DocumentationRepository documentationRepository) {
+            DocumentationRepository documentationRepository,
+            TaskRepository taskRepository) {
 
         this.documentationRepository = documentationRepository;
+        this.taskRepository = taskRepository;
     }
 
     public List<Documentation> getAllDocuments() {
         return documentationRepository.findAll();
+    }
+
+    public List<Documentation> getDocumentsForRole(String role, Long userId, Set<Long> accessibleProjectIds) {
+        if (accessibleProjectIds == null) {
+            return documentationRepository.findAll();
+        }
+        if (accessibleProjectIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Task> allTasks = taskRepository.findAll();
+        Set<Long> taskIds = allTasks.stream()
+                .filter(t -> accessibleProjectIds.contains(t.getProjectId()))
+                .map(Task::getTaskId)
+                .collect(Collectors.toSet());
+        if (taskIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return documentationRepository.findAll().stream()
+                .filter(d -> d.getTaskId() != null && taskIds.contains(d.getTaskId()))
+                .collect(Collectors.toList());
     }
 
     public Optional<Documentation> getDocumentById(Long documentId) {

@@ -7,9 +7,15 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { DetailDrawer, type DetailTab } from '../../components/common/DetailDrawer';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const RequirementsPage: React.FC = () => {
   const toast = useToast();
+  const { isAdmin, isManager } = useAuth();
+
+  const canCreate = isAdmin || isManager;
+  const canEdit = isAdmin || isManager;
+  const canDelete = isAdmin || isManager;
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,19 +120,23 @@ export const RequirementsPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.projectId) {
-      setFormError('Please fill in all required fields (Title, Project).');
+    if (!formData.title?.trim() || !formData.projectId || formData.projectId <= 0) {
+      setFormError('Please select a valid Linked Project and provide a Requirement Title.');
       return;
     }
 
     setFormSubmitting(true);
     setFormError(null);
     try {
+      const payload = {
+        ...formData,
+        title: formData.title.trim(),
+      };
       if (editingReq && editingReq.requirementId) {
-        await RequirementService.update(editingReq.requirementId, formData);
+        await RequirementService.update(editingReq.requirementId, payload);
         toast.success('Requirement Updated', `Requirement "${formData.title}" updated.`);
       } else {
-        await RequirementService.create(formData);
+        await RequirementService.create(payload);
         toast.success('Requirement Created', `Requirement "${formData.title}" created successfully.`);
       }
       setIsModalOpen(false);
@@ -222,10 +232,10 @@ export const RequirementsPage: React.FC = () => {
         isLoading={loading}
         error={error}
         onRefresh={fetchData}
-        onAdd={handleOpenCreate}
+        onAdd={canCreate ? handleOpenCreate : undefined}
         onView={handleViewRequirement}
-        onEdit={handleOpenEdit}
-        onDelete={handleOpenDelete}
+        onEdit={canEdit ? handleOpenEdit : undefined}
+        onDelete={canDelete ? handleOpenDelete : undefined}
         searchPlaceholder="Search requirements by title, project, status..."
         statusFilterField="status"
         statusOptions={['PENDING', 'IN_PROGRESS', 'COMPLETED']}

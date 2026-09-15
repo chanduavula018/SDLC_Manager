@@ -7,9 +7,15 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { DetailDrawer, type DetailTab } from '../../components/common/DetailDrawer';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const BuildsPage: React.FC = () => {
   const toast = useToast();
+  const { isAdmin, isDevOps } = useAuth();
+
+  const canCreate = isAdmin || isDevOps;
+  const canEdit = isAdmin || isDevOps;
+  const canDelete = isAdmin || isDevOps;
   const [builds, setBuilds] = useState<Build[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [versions, setVersions] = useState<Version[]>([]);
@@ -92,7 +98,7 @@ export const BuildsPage: React.FC = () => {
     setFormData({
       buildNumber: build.buildNumber,
       status: build.status || 'SUCCESS',
-      buildDate: build.buildDate || '',
+      buildDate: build.buildDate ? build.buildDate.split('T')[0] : '',
       projectId: build.projectId,
       versionId: build.versionId,
     });
@@ -122,19 +128,30 @@ export const BuildsPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.buildNumber || !formData.projectId || !formData.versionId) {
-      setFormError('Please fill in all required fields (Build Number, Project, Version).');
+    if (!formData.buildNumber?.trim() || !formData.projectId || formData.projectId <= 0 || !formData.versionId || formData.versionId <= 0) {
+      setFormError('Please select a valid Project and Compiled Version, and enter a Build Number.');
       return;
     }
 
     setFormSubmitting(true);
     setFormError(null);
     try {
+      let formattedBuildDate = formData.buildDate;
+      if (formattedBuildDate && !formattedBuildDate.includes('T')) {
+        formattedBuildDate = `${formattedBuildDate}T00:00:00`;
+      }
+
+      const payload = {
+        ...formData,
+        buildNumber: formData.buildNumber.trim(),
+        buildDate: formattedBuildDate,
+      };
+
       if (editingBuild && editingBuild.buildId) {
-        await BuildService.update(editingBuild.buildId, formData);
+        await BuildService.update(editingBuild.buildId, payload);
         toast.success('Build Updated', `Build #${formData.buildNumber} updated.`);
       } else {
-        await BuildService.create(formData);
+        await BuildService.create(payload);
         toast.success('Build Executed', `Build #${formData.buildNumber} created successfully.`);
       }
       setIsModalOpen(false);
@@ -190,7 +207,12 @@ export const BuildsPage: React.FC = () => {
       sortable: true,
       render: (b) => <span className="font-mono text-xs text-indigo-400">{getVersionTag(b.versionId)}</span>,
     },
-    { key: 'buildDate', header: 'Build Execution Date', sortable: true },
+    {
+      key: 'buildDate',
+      header: 'Build Execution Date',
+      sortable: true,
+      render: (b) => <span>{b.buildDate ? b.buildDate.split('T')[0] : '-'}</span>,
+    },
   ];
 
   const drawerTabs: DetailTab[] = [
@@ -231,10 +253,10 @@ export const BuildsPage: React.FC = () => {
         isLoading={loading}
         error={error}
         onRefresh={fetchData}
-        onAdd={handleOpenCreate}
+        onAdd={canCreate ? handleOpenCreate : undefined}
         onView={handleViewBuild}
-        onEdit={handleOpenEdit}
-        onDelete={handleOpenDelete}
+        onEdit={canEdit ? handleOpenEdit : undefined}
+        onDelete={canDelete ? handleOpenDelete : undefined}
         searchPlaceholder="Search builds by number, status, project..."
         statusFilterField="status"
         statusOptions={['PENDING', 'RUNNING', 'SUCCESS', 'FAILED']}
@@ -274,7 +296,10 @@ export const BuildsPage: React.FC = () => {
               <select
                 required
                 value={formData.projectId || ''}
-                onChange={(e) => setFormData({ ...formData, projectId: Number(e.target.value) })}
+                onChange={(e) => {
+                  const pId = Number(e.target.value);
+                  setFormData({ ...formData, projectId: pId, versionId: 0 });
+                }}
                 className="w-full px-3.5 py-2 rounded-xl form-select border border-[var(--border-color)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-indigo-500"
               >
                 <option value="">Select Project...</option>
@@ -297,11 +322,13 @@ export const BuildsPage: React.FC = () => {
                 className="w-full px-3.5 py-2 rounded-xl form-select border border-[var(--border-color)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-indigo-500"
               >
                 <option value="">Select Version...</option>
-                {versions.map((v) => (
-                  <option key={v.versionId} value={v.versionId}>
-                    {v.versionName}
-                  </option>
-                ))}
+                {versions
+                  .filter((v) => !formData.projectId || v.projectId === formData.projectId)
+                  .map((v) => (
+                    <option key={v.versionId} value={v.versionId}>
+                      {v.versionName}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>

@@ -2,6 +2,7 @@ import axios from 'axios';
 import type {
   User,
   Project,
+  ProjectMember,
   Requirement,
   TaskItem,
   TestCase,
@@ -11,6 +12,7 @@ import type {
   Build,
   Environment,
   Deployment,
+  DashboardSummary,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -22,11 +24,20 @@ export const apiClient = axios.create({
   },
 });
 
-// Interceptor for future Auth/JWT integration
+// Interceptor for Auth/JWT & RBAC session integration
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('auth_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  const userJson = localStorage.getItem('neuroforge_user');
+  if (userJson) {
+    try {
+      const u = JSON.parse(userJson);
+      if (u.role) config.headers['X-User-Role'] = u.role;
+      if (u.userId) config.headers['X-User-Id'] = String(u.userId);
+      if (u.email) config.headers['X-User-Email'] = u.email;
+    } catch {}
   }
   return config;
 });
@@ -67,6 +78,17 @@ export const ProjectService = {
   getByUserId: async (userId: number): Promise<Project[]> => {
     const res = await apiClient.get<Project[]>(`/projects/user/${userId}`);
     return res.data;
+  },
+  getMembers: async (projectId: number): Promise<ProjectMember[]> => {
+    const res = await apiClient.get<ProjectMember[]>(`/projects/${projectId}/members`);
+    return res.data;
+  },
+  addMember: async (projectId: number, userId: number): Promise<ProjectMember> => {
+    const res = await apiClient.post<ProjectMember>(`/projects/${projectId}/members`, { userId });
+    return res.data;
+  },
+  removeMember: async (projectId: number, userId: number): Promise<void> => {
+    await apiClient.delete(`/projects/${projectId}/members/${userId}`);
   },
 };
 
@@ -165,3 +187,11 @@ export const DeploymentService = {
     return res.data;
   },
 };
+
+export const DashboardService = {
+  getSummary: async (): Promise<DashboardSummary> => {
+    const res = await apiClient.get<DashboardSummary>('/dashboard/summary');
+    return res.data;
+  },
+};
+

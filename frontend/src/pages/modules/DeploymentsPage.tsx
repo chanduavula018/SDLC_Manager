@@ -13,9 +13,15 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { DetailDrawer } from '../../components/common/DetailDrawer';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const DeploymentsPage: React.FC = () => {
   const toast = useToast();
+  const { isAdmin, isDevOps } = useAuth();
+
+  const canCreate = isAdmin || isDevOps;
+  const canEdit = isAdmin || isDevOps;
+  const canDelete = isAdmin || isDevOps;
   const [deployments, setDeployments] = useState<Deployment[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [versions, setVersions] = useState<Version[]>([]);
@@ -134,19 +140,38 @@ export const DeploymentsPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.projectId || !formData.versionId || !formData.buildId || !formData.environmentId) {
-      setFormError('Please fill in all required fields (Project, Version, Build, Environment).');
+    if (
+      !formData.projectId ||
+      formData.projectId <= 0 ||
+      !formData.versionId ||
+      formData.versionId <= 0 ||
+      !formData.buildId ||
+      formData.buildId <= 0 ||
+      !formData.environmentId ||
+      formData.environmentId <= 0
+    ) {
+      setFormError('Please select valid options for Project, Version, Build Artifact, and Target Environment.');
       return;
     }
 
     setFormSubmitting(true);
     setFormError(null);
     try {
+      let formattedDepDate = formData.deploymentDate;
+      if (formattedDepDate && !formattedDepDate.includes('T')) {
+        formattedDepDate = `${formattedDepDate}T00:00:00`;
+      }
+
+      const payload = {
+        ...formData,
+        deploymentDate: formattedDepDate,
+      };
+
       if (editingDep && editingDep.deploymentId) {
-        await DeploymentService.update(editingDep.deploymentId, formData);
+        await DeploymentService.update(editingDep.deploymentId, payload);
         toast.success('Deployment Updated', `Deployment #${editingDep.deploymentId} updated.`);
       } else {
-        await DeploymentService.create(formData);
+        await DeploymentService.create(payload);
         toast.success('Deployment Triggered', `Deployment triggered successfully.`);
       }
       setIsModalOpen(false);
@@ -222,10 +247,10 @@ export const DeploymentsPage: React.FC = () => {
         isLoading={loading}
         error={error}
         onRefresh={fetchData}
-        onAdd={handleOpenCreate}
+        onAdd={canCreate ? handleOpenCreate : undefined}
         onView={handleViewDeployment}
-        onEdit={handleOpenEdit}
-        onDelete={handleOpenDelete}
+        onEdit={canEdit ? handleOpenEdit : undefined}
+        onDelete={canDelete ? handleOpenDelete : undefined}
         searchPlaceholder="Search deployments by status, project, environment..."
         statusFilterField="status"
         statusOptions={['PENDING', 'IN_PROGRESS', 'SUCCESS', 'FAILED']}
@@ -259,7 +284,10 @@ export const DeploymentsPage: React.FC = () => {
               <select
                 required
                 value={formData.projectId || ''}
-                onChange={(e) => setFormData({ ...formData, projectId: Number(e.target.value) })}
+                onChange={(e) => {
+                  const pId = Number(e.target.value);
+                  setFormData({ ...formData, projectId: pId, versionId: 0, buildId: 0, environmentId: 0 });
+                }}
                 className="w-full px-3.5 py-2 rounded-xl form-select border border-[var(--border-color)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-indigo-500"
               >
                 <option value="">Select Project...</option>
@@ -282,11 +310,13 @@ export const DeploymentsPage: React.FC = () => {
                 className="w-full px-3.5 py-2 rounded-xl form-select border border-[var(--border-color)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-indigo-500"
               >
                 <option value="">Select Version...</option>
-                {versions.map((v) => (
-                  <option key={v.versionId} value={v.versionId}>
-                    {v.versionName}
-                  </option>
-                ))}
+                {versions
+                  .filter((v) => !formData.projectId || v.projectId === formData.projectId)
+                  .map((v) => (
+                    <option key={v.versionId} value={v.versionId}>
+                      {v.versionName}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>
@@ -303,11 +333,13 @@ export const DeploymentsPage: React.FC = () => {
                 className="w-full px-3.5 py-2 rounded-xl form-select border border-[var(--border-color)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-indigo-500"
               >
                 <option value="">Select Build Run...</option>
-                {builds.map((b) => (
-                  <option key={b.buildId} value={b.buildId}>
-                    {b.buildNumber} ({b.status})
-                  </option>
-                ))}
+                {builds
+                  .filter((b) => !formData.projectId || b.projectId === formData.projectId)
+                  .map((b) => (
+                    <option key={b.buildId} value={b.buildId}>
+                      {b.buildNumber} ({b.status})
+                    </option>
+                  ))}
               </select>
             </div>
 
@@ -322,11 +354,13 @@ export const DeploymentsPage: React.FC = () => {
                 className="w-full px-3.5 py-2 rounded-xl form-select border border-[var(--border-color)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-indigo-500"
               >
                 <option value="">Select Environment...</option>
-                {environments.map((env) => (
-                  <option key={env.environmentId} value={env.environmentId}>
-                    {env.environmentName}
-                  </option>
-                ))}
+                {environments
+                  .filter((env) => !formData.projectId || env.projectId === formData.projectId)
+                  .map((env) => (
+                    <option key={env.environmentId} value={env.environmentId}>
+                      {env.environmentName}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>

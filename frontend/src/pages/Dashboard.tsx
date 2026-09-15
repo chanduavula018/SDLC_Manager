@@ -30,6 +30,7 @@ import {
   EnvironmentService,
   TestCaseService,
   VersionService,
+  DashboardService,
 } from '../services/api';
 import type { Project, BugReport } from '../types';
 import { StatusBadge } from '../components/common/StatusBadge';
@@ -60,74 +61,94 @@ export const Dashboard: React.FC = () => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [
-        projects,
-        bugs,
-        tasks,
-        builds,
-        deployments,
-        users,
-        requirements,
-        environments,
-        testCases,
-        versions,
-      ] = await Promise.all([
-        ProjectService.getAll().catch(() => []),
-        BugReportService.getAll().catch(() => []),
-        TaskService.getAll().catch(() => []),
-        BuildService.getAll().catch(() => []),
-        DeploymentService.getAll().catch(() => []),
-        UserService.getAll().catch(() => []),
-        RequirementService.getAll().catch(() => []),
-        EnvironmentService.getAll().catch(() => []),
-        TestCaseService.getAll().catch(() => []),
-        VersionService.getAll().catch(() => []),
-      ]);
-
-      const openBugs = bugs.filter((b) => b.status?.toUpperCase() !== 'CLOSED' && b.status?.toUpperCase() !== 'RESOLVED');
-      const pendingTasks = tasks.filter((t) => t.status?.toUpperCase() !== 'COMPLETED' && t.status?.toUpperCase() !== 'DONE');
-
+      // Primary: call dedicated dashboard summary API
+      const summary = await DashboardService.getSummary();
       setStats({
-        projectsCount: projects.length,
-        requirementsCount: requirements.length,
-        pendingTasksCount: pendingTasks.length,
-        testCasesCount: testCases.length,
-        openBugsCount: openBugs.length,
-        activeBuildsCount: builds.length,
-        activeDeploymentsCount: deployments.length,
-        usersCount: users.length,
-        environmentsCount: environments.length,
-        versionsCount: versions.length,
+        projectsCount: summary.sdlcPipelineCounts?.projects ?? summary.totalProjects,
+        requirementsCount: summary.sdlcPipelineCounts?.requirements ?? summary.openRequirements,
+        pendingTasksCount: summary.pendingTasks,
+        testCasesCount: summary.sdlcPipelineCounts?.testCases ?? 0,
+        openBugsCount: summary.openBugReports,
+        activeBuildsCount: summary.activeBuilds,
+        activeDeploymentsCount: summary.deployments,
+        usersCount: summary.registeredUsers,
+        environmentsCount: summary.activeEnvironments,
+        versionsCount: summary.sdlcPipelineCounts?.versions ?? 0,
       });
-
-      // Calculate Project status distribution
-      const pDist: Record<string, number> = {};
-      projects.forEach((p) => {
-        const st = p.status ? p.status.toUpperCase() : 'UNKNOWN';
-        pDist[st] = (pDist[st] || 0) + 1;
-      });
-      setProjectStatusDist(pDist);
-
-      // Calculate Task status distribution
-      const tDist: Record<string, number> = {};
-      tasks.forEach((t) => {
-        const st = t.status ? t.status.toUpperCase() : 'UNKNOWN';
-        tDist[st] = (tDist[st] || 0) + 1;
-      });
-      setTaskStatusDist(tDist);
-
-      // Calculate Bug severity distribution
-      const bDist: Record<string, number> = {};
-      bugs.forEach((b) => {
-        const sev = b.severity ? b.severity.toUpperCase() : 'UNKNOWN';
-        bDist[sev] = (bDist[sev] || 0) + 1;
-      });
-      setBugSeverityDist(bDist);
-
-      setRecentProjects(projects.slice(0, 5));
-      setRecentBugs(openBugs.slice(0, 5));
+      setProjectStatusDist(summary.projectStatusDistribution || {});
+      setTaskStatusDist(summary.taskStatusDistribution || {});
+      setBugSeverityDist(summary.bugSeverityDistribution || {});
+      setRecentProjects(summary.recentProjects || []);
+      setRecentBugs(summary.openBugReportsList || []);
     } catch {
-      // ignore
+      // Fallback: fetch individual endpoints if summary API fails
+      try {
+        const [
+          projects,
+          bugs,
+          tasks,
+          builds,
+          deployments,
+          users,
+          requirements,
+          environments,
+          testCases,
+          versions,
+        ] = await Promise.all([
+          ProjectService.getAll().catch(() => []),
+          BugReportService.getAll().catch(() => []),
+          TaskService.getAll().catch(() => []),
+          BuildService.getAll().catch(() => []),
+          DeploymentService.getAll().catch(() => []),
+          UserService.getAll().catch(() => []),
+          RequirementService.getAll().catch(() => []),
+          EnvironmentService.getAll().catch(() => []),
+          TestCaseService.getAll().catch(() => []),
+          VersionService.getAll().catch(() => []),
+        ]);
+
+        const openBugs = bugs.filter((b) => b.status?.toUpperCase() !== 'CLOSED' && b.status?.toUpperCase() !== 'RESOLVED');
+        const pendingTasks = tasks.filter((t) => t.status?.toUpperCase() !== 'COMPLETED' && t.status?.toUpperCase() !== 'DONE');
+
+        setStats({
+          projectsCount: projects.length,
+          requirementsCount: requirements.length,
+          pendingTasksCount: pendingTasks.length,
+          testCasesCount: testCases.length,
+          openBugsCount: openBugs.length,
+          activeBuildsCount: builds.length,
+          activeDeploymentsCount: deployments.length,
+          usersCount: users.length,
+          environmentsCount: environments.length,
+          versionsCount: versions.length,
+        });
+
+        const pDist: Record<string, number> = {};
+        projects.forEach((p) => {
+          const st = p.status ? p.status.toUpperCase() : 'UNKNOWN';
+          pDist[st] = (pDist[st] || 0) + 1;
+        });
+        setProjectStatusDist(pDist);
+
+        const tDist: Record<string, number> = {};
+        tasks.forEach((t) => {
+          const st = t.status ? t.status.toUpperCase() : 'UNKNOWN';
+          tDist[st] = (tDist[st] || 0) + 1;
+        });
+        setTaskStatusDist(tDist);
+
+        const bDist: Record<string, number> = {};
+        bugs.forEach((b) => {
+          const sev = b.severity ? b.severity.toUpperCase() : 'UNKNOWN';
+          bDist[sev] = (bDist[sev] || 0) + 1;
+        });
+        setBugSeverityDist(bDist);
+
+        setRecentProjects(projects.slice(0, 5));
+        setRecentBugs(openBugs.slice(0, 5));
+      } catch {
+        // ignore
+      }
     } finally {
       setLoading(false);
     }
@@ -230,19 +251,13 @@ export const Dashboard: React.FC = () => {
               <span>SDLC & DevOps Control Center</span>
             </div>
             <h1 className="text-3xl font-extrabold text-[var(--text-primary)] tracking-tight">
-              Welcome to Neuro<span className="text-indigo-500">Forge</span>
+              Welcome to <span className="font-black text-[var(--text-primary)]">Neuro</span><span className="text-[#4f46e5] dark:text-[#818cf8]">Forge</span>
             </h1>
             <p className="text-sm text-[var(--text-secondary)] mt-2 max-w-2xl leading-relaxed">
-              Manage your complete software development lifecycle in one place. Synchronized across all 11 integrated engineering modules.
+              Manage your complete software development lifecycle in one place, from planning and requirements to development, testing, and deployment.
             </p>
           </div>
           <div className="flex items-center space-x-3 shrink-0">
-            <div className="px-4 py-2 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-center">
-              <span className="block text-xl font-extrabold text-indigo-400">11</span>
-              <span className="text-[10px] font-semibold text-[var(--text-secondary)] uppercase tracking-wider">
-                Modules Integrated
-              </span>
-            </div>
             <Link
               to="/projects"
               className="px-4 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs flex items-center space-x-2 shadow-lg shadow-indigo-600/30 transition-all shrink-0"
@@ -289,44 +304,38 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* SDLC Pipeline Workflow Visualizer */}
-      <div className="glass-panel p-6 rounded-3xl border border-[var(--border-color)] space-y-4">
+      <div className="glass-panel p-6 rounded-3xl border border-[var(--border-color)] space-y-5">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-bold text-[var(--text-primary)] flex items-center space-x-2">
-              <Activity className="w-5 h-5 text-indigo-400" />
-              <span>Connected SDLC & DevOps Pipeline</span>
+              <Activity className="w-5 h-5 text-indigo-500" />
+              <span>END-TO-END SDLC LIFECYCLE PIPELINE</span>
             </h2>
             <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-              End-to-end software lifecycle workflow from project inception to production release.
+              10 Connected Modules representing the complete software lifecycle workflow from project inception to production deployment.
             </p>
           </div>
         </div>
 
-        <div className="overflow-x-auto py-3">
-          <div className="flex items-center space-x-2 min-w-max">
-            {pipelineSteps.map((step, index) => {
-              const StepIcon = step.icon;
-              return (
-                <React.Fragment key={step.name}>
-                  <Link
-                    to={step.path}
-                    className="flex flex-col items-center p-3.5 rounded-2xl glass-panel hover:border-indigo-500/50 hover:bg-indigo-500/10 transition-all w-28 text-center group"
-                  >
-                    <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 mb-2 border border-indigo-500/20 group-hover:scale-110 transition-transform">
-                      <StepIcon className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-bold text-[var(--text-primary)] truncate w-full">{step.name}</span>
-                    <span className="text-[11px] text-[var(--text-secondary)] mt-1 font-mono font-bold">
-                      {loading ? '-' : step.count} items
-                    </span>
-                  </Link>
-                  {index < pipelineSteps.length - 1 && (
-                    <div className="text-slate-500/50 text-xs font-bold px-1">→</div>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+          {pipelineSteps.map((step) => {
+            const StepIcon = step.icon;
+            return (
+              <Link
+                key={step.name}
+                to={step.path}
+                className="flex flex-col items-center p-3.5 rounded-2xl glass-panel hover:border-indigo-500/50 hover:bg-indigo-500/10 transition-all text-center group relative"
+              >
+                <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-500 mb-2 border border-indigo-500/20 group-hover:scale-110 transition-transform">
+                  <StepIcon className="w-4 h-4" />
+                </div>
+                <span className="text-[11px] font-extrabold text-[var(--text-primary)] uppercase truncate w-full tracking-tight">{step.name}</span>
+                <span className="text-[11px] text-[var(--text-secondary)] mt-1 font-mono font-bold">
+                  {loading ? '-' : step.count} items
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </div>
 

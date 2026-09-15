@@ -6,9 +6,15 @@ import { Modal } from '../../components/common/Modal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { DetailDrawer } from '../../components/common/DetailDrawer';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const DocumentationPage: React.FC = () => {
   const toast = useToast();
+  const { isAdmin, isManager, isDeveloper } = useAuth();
+
+  const canCreate = isAdmin || isManager || isDeveloper;
+  const canEdit = isAdmin || isManager || isDeveloper;
+  const canDelete = isAdmin || isManager || isDeveloper;
   const [docs, setDocs] = useState<Documentation[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,19 +103,23 @@ export const DocumentationPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.taskId) {
-      setFormError('Please fill in all required fields (Title, Task).');
+    if (!formData.title?.trim() || !formData.taskId || formData.taskId <= 0) {
+      setFormError('Please select a valid Associated Task and enter a Document Title.');
       return;
     }
 
     setFormSubmitting(true);
     setFormError(null);
     try {
+      const payload = {
+        ...formData,
+        title: formData.title.trim(),
+      };
       if (editingDoc && editingDoc.documentId) {
-        await DocumentationService.update(editingDoc.documentId, formData);
+        await DocumentationService.update(editingDoc.documentId, payload);
         toast.success('Document Updated', `Document "${formData.title}" updated.`);
       } else {
-        await DocumentationService.create(formData);
+        await DocumentationService.create(payload);
         toast.success('Document Created', `Document "${formData.title}" published successfully.`);
       }
       setIsModalOpen(false);
@@ -167,10 +177,10 @@ export const DocumentationPage: React.FC = () => {
         isLoading={loading}
         error={error}
         onRefresh={fetchData}
-        onAdd={handleOpenCreate}
+        onAdd={canCreate ? handleOpenCreate : undefined}
         onView={handleViewDoc}
-        onEdit={handleOpenEdit}
-        onDelete={handleOpenDelete}
+        onEdit={canEdit ? handleOpenEdit : undefined}
+        onDelete={canDelete ? handleOpenDelete : undefined}
         searchPlaceholder="Search documentation by title, task, content..."
       />
 

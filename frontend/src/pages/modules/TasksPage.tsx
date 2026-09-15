@@ -7,9 +7,15 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { DetailDrawer, type DetailTab } from '../../components/common/DetailDrawer';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const TasksPage: React.FC = () => {
   const toast = useToast();
+  const { isAdmin, isManager, isDeveloper } = useAuth();
+
+  const canCreate = isAdmin || isManager;
+  const canEdit = isAdmin || isManager || isDeveloper;
+  const canDelete = isAdmin || isManager;
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [requirements, setRequirements] = useState<Requirement[]>([]);
@@ -125,19 +131,23 @@ export const TasksPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.taskName || !formData.projectId || !formData.requirementId) {
-      setFormError('Please fill in all required fields (Task Name, Project, Requirement).');
+    if (!formData.taskName?.trim() || !formData.projectId || formData.projectId <= 0 || !formData.requirementId || formData.requirementId <= 0) {
+      setFormError('Please select a valid Project and Requirement, and enter a Task Name.');
       return;
     }
 
     setFormSubmitting(true);
     setFormError(null);
     try {
+      const payload = {
+        ...formData,
+        taskName: formData.taskName.trim(),
+      };
       if (editingTask && editingTask.taskId) {
-        await TaskService.update(editingTask.taskId, formData);
+        await TaskService.update(editingTask.taskId, payload);
         toast.success('Task Updated', `Task "${formData.taskName}" updated.`);
       } else {
-        await TaskService.create(formData);
+        await TaskService.create(payload);
         toast.success('Task Created', `Task "${formData.taskName}" created successfully.`);
       }
       setIsModalOpen(false);
@@ -231,10 +241,10 @@ export const TasksPage: React.FC = () => {
         isLoading={loading}
         error={error}
         onRefresh={fetchData}
-        onAdd={handleOpenCreate}
+        onAdd={canCreate ? handleOpenCreate : undefined}
         onView={handleViewTask}
-        onEdit={handleOpenEdit}
-        onDelete={handleOpenDelete}
+        onEdit={canEdit ? handleOpenEdit : undefined}
+        onDelete={canDelete ? handleOpenDelete : undefined}
         searchPlaceholder="Search tasks by name, project, requirement..."
         statusFilterField="status"
         statusOptions={['TODO', 'IN_PROGRESS', 'COMPLETED']}
@@ -274,7 +284,7 @@ export const TasksPage: React.FC = () => {
               rows={3}
               value={formData.description || ''}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Detailed task description..."
+              placeholder="Detailed description of task deliverables..."
               className="w-full px-3.5 py-2 rounded-xl glass-input text-sm text-[var(--text-primary)] focus:outline-none"
             />
           </div>
@@ -287,7 +297,10 @@ export const TasksPage: React.FC = () => {
               <select
                 required
                 value={formData.projectId || ''}
-                onChange={(e) => setFormData({ ...formData, projectId: Number(e.target.value) })}
+                onChange={(e) => {
+                  const pId = Number(e.target.value);
+                  setFormData({ ...formData, projectId: pId, requirementId: 0 });
+                }}
                 className="w-full px-3.5 py-2 rounded-xl form-select border border-[var(--border-color)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-indigo-500"
               >
                 <option value="">Select Project...</option>
@@ -310,11 +323,13 @@ export const TasksPage: React.FC = () => {
                 className="w-full px-3.5 py-2 rounded-xl form-select border border-[var(--border-color)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-indigo-500"
               >
                 <option value="">Select Requirement...</option>
-                {requirements.map((r) => (
-                  <option key={r.requirementId} value={r.requirementId}>
-                    {r.title}
-                  </option>
-                ))}
+                {requirements
+                  .filter((r) => !formData.projectId || r.projectId === formData.projectId)
+                  .map((r) => (
+                    <option key={r.requirementId} value={r.requirementId}>
+                      {r.title}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>

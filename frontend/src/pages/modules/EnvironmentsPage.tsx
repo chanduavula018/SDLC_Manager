@@ -7,9 +7,15 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { DetailDrawer, type DetailTab } from '../../components/common/DetailDrawer';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const EnvironmentsPage: React.FC = () => {
   const toast = useToast();
+  const { isAdmin, isDevOps } = useAuth();
+
+  const canCreate = isAdmin || isDevOps;
+  const canEdit = isAdmin || isDevOps;
+  const canDelete = isAdmin || isDevOps;
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,19 +117,23 @@ export const EnvironmentsPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.environmentName || !formData.projectId) {
-      setFormError('Please fill in all required fields (Environment Name, Project).');
+    if (!formData.environmentName?.trim() || !formData.projectId || formData.projectId <= 0) {
+      setFormError('Please select a valid Project and enter an Environment Name.');
       return;
     }
 
     setFormSubmitting(true);
     setFormError(null);
     try {
+      const payload = {
+        ...formData,
+        environmentName: formData.environmentName.trim(),
+      };
       if (editingEnv && editingEnv.environmentId) {
-        await EnvironmentService.update(editingEnv.environmentId, formData);
+        await EnvironmentService.update(editingEnv.environmentId, payload);
         toast.success('Environment Updated', `Environment "${formData.environmentName}" updated.`);
       } else {
-        await EnvironmentService.create(formData);
+        await EnvironmentService.create(payload);
         toast.success('Environment Provisioned', `Environment "${formData.environmentName}" created.`);
       }
       setIsModalOpen(false);
@@ -218,10 +228,10 @@ export const EnvironmentsPage: React.FC = () => {
         isLoading={loading}
         error={error}
         onRefresh={fetchData}
-        onAdd={handleOpenCreate}
+        onAdd={canCreate ? handleOpenCreate : undefined}
         onView={handleViewEnv}
-        onEdit={handleOpenEdit}
-        onDelete={handleOpenDelete}
+        onEdit={canEdit ? handleOpenEdit : undefined}
+        onDelete={canDelete ? handleOpenDelete : undefined}
         searchPlaceholder="Search environments by name, status, project..."
         statusFilterField="status"
         statusOptions={['ACTIVE', 'INACTIVE', 'MAINTENANCE']}

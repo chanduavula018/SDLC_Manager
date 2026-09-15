@@ -35,6 +35,7 @@ interface DataTableProps<T> {
   onView?: (item: T) => void;
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
+  renderActions?: (item: T) => React.ReactNode;
   searchPlaceholder?: string;
   statusFilterField?: keyof T;
   statusOptions?: string[];
@@ -53,6 +54,7 @@ export function DataTable<T extends Record<string, any>>({
   onView,
   onEdit,
   onDelete,
+  renderActions,
   searchPlaceholder = 'Search records...',
   statusFilterField,
   statusOptions = [],
@@ -151,6 +153,7 @@ export function DataTable<T extends Record<string, any>>({
               disabled={isLoading}
               className="p-2.5 rounded-xl bg-slate-500/10 hover:bg-slate-500/20 text-[var(--text-primary)] border border-[var(--border-color)] transition-all disabled:opacity-50"
               title="Refresh Data"
+              aria-label="Refresh Data"
             >
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
@@ -160,6 +163,7 @@ export function DataTable<T extends Record<string, any>>({
             <button
               onClick={onAdd}
               className="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm flex items-center space-x-2 shadow-lg shadow-indigo-600/25 transition-all shrink-0"
+              aria-label={`Add new item to ${title}`}
             >
               <Plus className="w-4 h-4" />
               <span>Add New</span>
@@ -181,6 +185,7 @@ export function DataTable<T extends Record<string, any>>({
                 setCurrentPage(1);
               }}
               placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
               className="w-full pl-10 pr-4 py-2 rounded-xl glass-input text-sm text-[var(--text-primary)] placeholder:text-[var(--text-secondary)] focus:outline-none"
             />
           </div>
@@ -194,6 +199,7 @@ export function DataTable<T extends Record<string, any>>({
                   setStatusFilter(e.target.value);
                   setCurrentPage(1);
                 }}
+                aria-label="Filter by status"
                 className="w-full sm:w-auto form-select border border-[var(--border-color)] rounded-xl px-3 py-2 text-xs font-medium text-[var(--text-primary)] focus:outline-none focus:border-indigo-500"
               >
                 <option value="ALL">All Statuses</option>
@@ -211,6 +217,7 @@ export function DataTable<T extends Record<string, any>>({
               onClick={handleResetFilters}
               className="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-slate-500/10 text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-xs transition-colors"
               title="Reset Filters"
+              aria-label="Reset Filters"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Reset</span>
@@ -226,6 +233,7 @@ export function DataTable<T extends Record<string, any>>({
               setPageSize(Number(e.target.value));
               setCurrentPage(1);
             }}
+            aria-label="Select entries per page"
             className="form-select border border-[var(--border-color)] rounded-lg px-2.5 py-1.5 text-[var(--text-primary)] focus:outline-none focus:border-indigo-500"
           >
             <option value={5}>5</option>
@@ -248,6 +256,7 @@ export function DataTable<T extends Record<string, any>>({
             <button
               onClick={onRefresh}
               className="px-3 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-500 rounded-lg text-xs transition-colors font-medium"
+              aria-label="Retry loading data"
             >
               Retry
             </button>
@@ -287,7 +296,7 @@ export function DataTable<T extends Record<string, any>>({
                     </div>
                   </th>
                 ))}
-                {(onView || onEdit || onDelete) && (
+                {(onView || onEdit || onDelete || renderActions) && (
                   <th className="px-6 py-4 font-semibold text-right">Actions</th>
                 )}
               </tr>
@@ -296,7 +305,7 @@ export function DataTable<T extends Record<string, any>>({
             <tbody className="divide-y divide-[var(--border-color)]">
               {isLoading ? (
                 <tr>
-                  <td colSpan={columns.length + (onView || onEdit || onDelete ? 1 : 0)} className="py-16 text-center">
+                  <td colSpan={columns.length + (onView || onEdit || onDelete || renderActions ? 1 : 0)} className="py-16 text-center">
                     <div className="flex flex-col items-center justify-center space-y-3">
                       <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
                       <p className="text-xs text-[var(--text-secondary)] font-medium">Fetching records from server...</p>
@@ -305,7 +314,7 @@ export function DataTable<T extends Record<string, any>>({
                 </tr>
               ) : paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length + (onView || onEdit || onDelete ? 1 : 0)} className="py-16 text-center">
+                  <td colSpan={columns.length + (onView || onEdit || onDelete || renderActions ? 1 : 0)} className="py-16 text-center">
                     <div className="flex flex-col items-center justify-center space-y-3">
                       <div className="p-3 bg-slate-500/10 rounded-2xl border border-[var(--border-color)] text-[var(--text-secondary)]">
                         <Inbox className="w-8 h-8" />
@@ -339,34 +348,41 @@ export function DataTable<T extends Record<string, any>>({
                       </td>
                     ))}
 
-                    {(onView || onEdit || onDelete) && (
+                    {(onView || onEdit || onDelete || renderActions) && (
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="flex items-center justify-end space-x-1.5">
+                          {renderActions && renderActions(item)}
                           {onView && (
                             <button
                               onClick={() => onView(item)}
-                              className="p-1.5 text-[var(--text-secondary)] hover:text-indigo-400 hover:bg-indigo-500/10 rounded-lg transition-colors"
+                              className="p-1.5 text-[var(--text-secondary)] hover:text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-colors flex items-center space-x-1"
                               title="View details & connected pipeline"
+                              aria-label="View details"
                             >
                               <Eye className="w-4 h-4" />
+                              <span className="sr-only">View</span>
                             </button>
                           )}
                           {onEdit && (
                             <button
                               onClick={() => onEdit(item)}
-                              className="p-1.5 text-[var(--text-secondary)] hover:text-indigo-500 hover:bg-indigo-500/10 rounded-lg transition-colors"
+                              className="p-1.5 text-[var(--text-secondary)] hover:text-indigo-600 hover:bg-indigo-500/10 rounded-lg transition-colors flex items-center space-x-1"
                               title="Edit item"
+                              aria-label="Edit item"
                             >
                               <Edit2 className="w-4 h-4" />
+                              <span className="sr-only">Edit</span>
                             </button>
                           )}
                           {onDelete && (
                             <button
                               onClick={() => onDelete(item)}
-                              className="p-1.5 text-[var(--text-secondary)] hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
+                              className="p-1.5 text-[var(--text-secondary)] hover:text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors flex items-center space-x-1"
                               title="Delete item"
+                              aria-label="Delete item"
                             >
                               <Trash2 className="w-4 h-4" />
+                              <span className="sr-only">Delete</span>
                             </button>
                           )}
                         </div>

@@ -7,9 +7,15 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { DetailDrawer, type DetailTab } from '../../components/common/DetailDrawer';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const TestCasesPage: React.FC = () => {
   const toast = useToast();
+  const { isAdmin, isTester } = useAuth();
+
+  const canCreate = isAdmin || isTester;
+  const canEdit = isAdmin || isTester;
+  const canDelete = isAdmin || isTester;
   const [testCases, setTestCases] = useState<TestCase[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,19 +120,23 @@ export const TestCasesPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.projectId) {
-      setFormError('Please fill in all required fields (Title, Project).');
+    if (!formData.title?.trim() || !formData.projectId || formData.projectId <= 0) {
+      setFormError('Please select a valid Project and provide a Test Case Title.');
       return;
     }
 
     setFormSubmitting(true);
     setFormError(null);
     try {
+      const payload = {
+        ...formData,
+        title: formData.title.trim(),
+      };
       if (editingTest && editingTest.testCaseId) {
-        await TestCaseService.update(editingTest.testCaseId, formData);
+        await TestCaseService.update(editingTest.testCaseId, payload);
         toast.success('Test Case Updated', `Test Case "${formData.title}" updated.`);
       } else {
-        await TestCaseService.create(formData);
+        await TestCaseService.create(payload);
         toast.success('Test Case Created', `Test Case "${formData.title}" created successfully.`);
       }
       setIsModalOpen(false);
@@ -221,10 +231,10 @@ export const TestCasesPage: React.FC = () => {
         isLoading={loading}
         error={error}
         onRefresh={fetchData}
-        onAdd={handleOpenCreate}
+        onAdd={canCreate ? handleOpenCreate : undefined}
         onView={handleViewTestCase}
-        onEdit={handleOpenEdit}
-        onDelete={handleOpenDelete}
+        onEdit={canEdit ? handleOpenEdit : undefined}
+        onDelete={canDelete ? handleOpenDelete : undefined}
         searchPlaceholder="Search test cases by title, status, project..."
         statusFilterField="status"
         statusOptions={['TODO', 'IN_PROGRESS', 'PASSED', 'FAILED']}

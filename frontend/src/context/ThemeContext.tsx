@@ -13,7 +13,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('neuroforge_theme');
     if (saved === 'light' || saved === 'dark') return saved;
-    return 'dark'; // Default to dark mode
+    return 'light'; // Default to light mode (white/light enterprise background)
   });
 
   useEffect(() => {

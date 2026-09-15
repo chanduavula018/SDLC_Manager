@@ -13,128 +13,312 @@ import {
   Hammer,
   Server,
   Rocket,
-  ShieldCheck,
   ChevronRight,
+  Settings,
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import { NeuroForgeLogo } from '../common/NeuroForgeLogo';
 
 interface NavItem {
   name: string;
   path: string;
   icon: React.ElementType;
+  section: 'core' | 'devops' | 'admin';
+  roles: string[];
 }
 
-const coreModules: NavItem[] = [
-  { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-  { name: 'User Management', path: '/users', icon: Users },
-  { name: 'Project Management', path: '/projects', icon: FolderGit2 },
-  { name: 'Requirements', path: '/requirements', icon: FileCheck2 },
-  { name: 'Tasks', path: '/tasks', icon: CheckSquare },
-  { name: 'Test Cases', path: '/test-cases', icon: TestTube },
-  { name: 'Bug Reports', path: '/bug-reports', icon: Bug },
-  { name: 'Documentation', path: '/documentation', icon: BookOpen },
+const allNavItems: NavItem[] = [
+  {
+    name: 'Dashboard',
+    path: '/dashboard',
+    icon: LayoutDashboard,
+    section: 'core',
+    roles: ['ADMIN', 'PROJECT_MANAGER', 'DEVELOPER', 'TESTER', 'DEVOPS_ENGINEER', 'CLIENT'],
+  },
+  {
+    name: 'Project Management',
+    path: '/projects',
+    icon: FolderGit2,
+    section: 'core',
+    roles: ['ADMIN', 'PROJECT_MANAGER', 'DEVELOPER', 'TESTER', 'DEVOPS_ENGINEER', 'CLIENT'],
+  },
+  {
+    name: 'Requirements',
+    path: '/requirements',
+    icon: FileCheck2,
+    section: 'core',
+    roles: ['ADMIN', 'PROJECT_MANAGER', 'DEVELOPER', 'TESTER', 'CLIENT'],
+  },
+  {
+    name: 'Tasks',
+    path: '/tasks',
+    icon: CheckSquare,
+    section: 'core',
+    roles: ['ADMIN', 'PROJECT_MANAGER', 'DEVELOPER'],
+  },
+  {
+    name: 'Test Cases',
+    path: '/test-cases',
+    icon: TestTube,
+    section: 'core',
+    roles: ['ADMIN', 'TESTER'],
+  },
+  {
+    name: 'Bug Reports',
+    path: '/bug-reports',
+    icon: Bug,
+    section: 'core',
+    roles: ['ADMIN', 'PROJECT_MANAGER', 'DEVELOPER', 'TESTER', 'CLIENT'],
+  },
+  {
+    name: 'Documentation',
+    path: '/documentation',
+    icon: BookOpen,
+    section: 'core',
+    roles: ['ADMIN', 'PROJECT_MANAGER', 'DEVELOPER', 'TESTER', 'CLIENT'],
+  },
+  {
+    name: 'Versions',
+    path: '/versions',
+    icon: GitBranch,
+    section: 'devops',
+    roles: ['ADMIN', 'PROJECT_MANAGER', 'DEVELOPER', 'DEVOPS_ENGINEER'],
+  },
+  {
+    name: 'Builds',
+    path: '/builds',
+    icon: Hammer,
+    section: 'devops',
+    roles: ['ADMIN', 'DEVELOPER', 'DEVOPS_ENGINEER'],
+  },
+  {
+    name: 'Environments',
+    path: '/environments',
+    icon: Server,
+    section: 'devops',
+    roles: ['ADMIN', 'DEVOPS_ENGINEER'],
+  },
+  {
+    name: 'Deployments',
+    path: '/deployments',
+    icon: Rocket,
+    section: 'devops',
+    roles: ['ADMIN', 'DEVOPS_ENGINEER'],
+  },
+  {
+    name: 'User Management',
+    path: '/users',
+    icon: Users,
+    section: 'admin',
+    roles: ['ADMIN'],
+  },
 ];
 
-const devopsModules: NavItem[] = [
-  { name: 'Versions', path: '/versions', icon: GitBranch },
-  { name: 'Builds', path: '/builds', icon: Hammer },
-  { name: 'Environments', path: '/environments', icon: Server },
-  { name: 'Deployments', path: '/deployments', icon: Rocket },
-];
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
 
-export const Sidebar: React.FC = () => {
+export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
+  const { user } = useAuth();
+  const rawRole = user?.role ? user.role.toUpperCase().replace(' ', '_') : 'DEVELOPER';
+
+  const getDashboardPath = (r: string) => {
+    if (r === 'ADMIN') return '/admin/dashboard';
+    if (r === 'PROJECT_MANAGER') return '/pm/dashboard';
+    if (r === 'DEVELOPER') return '/developer/dashboard';
+    if (r === 'TESTER') return '/tester/dashboard';
+    if (r === 'DEVOPS_ENGINEER') return '/devops/dashboard';
+    if (r === 'CLIENT') return '/client/dashboard';
+    return '/dashboard';
+  };
+
+  const userDashboardPath = getDashboardPath(rawRole);
+
+  const allowedItems = allNavItems.filter(
+    (item) => rawRole === 'ADMIN' || item.roles.includes(rawRole)
+  );
+
+  const coreItems = allowedItems.filter((i) => i.section === 'core');
+  const devopsItems = allowedItems.filter((i) => i.section === 'devops');
+  const adminItems = allowedItems.filter((i) => i.section === 'admin');
+
   return (
-    <aside className="app-sidebar w-64 bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] flex flex-col h-screen sticky top-0 z-30 select-none transition-colors duration-250 shrink-0">
-      {/* Brand Header */}
-      <div className="h-16 px-5 flex items-center border-b border-[var(--border-color)]">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 shadow-md shadow-indigo-500/20 text-white shrink-0">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="font-bold text-base text-[var(--text-primary)] tracking-wide flex items-center">
-              NEURO<span className="text-indigo-500 font-extrabold">FORGE</span>
-            </h1>
-            <p className="text-[10px] text-[var(--text-secondary)] font-mono tracking-tighter uppercase font-medium">
-              SDLC & DevOps Control Center
-            </p>
-          </div>
-        </div>
-      </div>
+    <>
+      {/* Mobile Backdrop Overlay */}
+      {isOpen && (
+        <div
+          onClick={onClose}
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-40 lg:hidden transition-opacity"
+          aria-hidden="true"
+        />
+      )}
 
-      {/* Navigation List */}
-      <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
-        {/* Core Modules */}
-        <div className="space-y-1">
-          <div className="px-3 pb-2 text-[10px] font-bold text-[var(--text-secondary)] tracking-wider uppercase">
-            Core Modules
-          </div>
-          {coreModules.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end={item.path === '/'}
-                className={({ isActive }) =>
-                  `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all group ${
-                    isActive
-                      ? 'bg-indigo-600/15 text-indigo-500 border border-indigo-500/30 shadow-xs'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-indigo-500/10'
-                  }`
-                }
-              >
-                <div className="flex items-center space-x-2.5 min-w-0">
-                  <Icon className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" />
-                  <span className="truncate">{item.name}</span>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-              </NavLink>
-            );
-          })}
+      <aside
+        className={`app-sidebar w-64 bg-[var(--bg-sidebar)] border-r border-[var(--border-color)] flex flex-col h-screen fixed lg:sticky top-0 left-0 z-50 lg:z-30 select-none transition-transform duration-300 shrink-0 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+      >
+        {/* Brand Header */}
+        <div className="h-16 px-5 flex items-center justify-between border-b border-[var(--border-color)]">
+          <NeuroForgeLogo size="sm" subtitle={`${rawRole.replace('_', ' ')} PORTAL`} />
+
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="lg:hidden p-1.5 rounded-lg text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-slate-500/10"
+              aria-label="Close menu"
+            >
+              ✕
+            </button>
+          )}
         </div>
 
-        {/* DevOps Modules */}
-        <div className="space-y-1">
-          <div className="px-3 pb-2 text-[10px] font-bold text-[var(--text-secondary)] tracking-wider uppercase">
-            DevOps
-          </div>
-          {devopsModules.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) =>
-                  `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all group ${
-                    isActive
-                      ? 'bg-indigo-600/15 text-indigo-500 border border-indigo-500/30 shadow-xs'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-indigo-500/10'
-                  }`
-                }
-              >
-                <div className="flex items-center space-x-2.5 min-w-0">
-                  <Icon className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" />
-                  <span className="truncate">{item.name}</span>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
-              </NavLink>
-            );
-          })}
-        </div>
-      </div>
+        {/* Navigation List */}
+        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
+          {/* CORE / SDLC Section */}
+          <div className="space-y-1">
+            <div className="px-3 pb-2 text-[10px] font-extrabold text-[var(--text-secondary)] tracking-wider uppercase">
+              CORE / SDLC
+            </div>
+            {coreItems.map((item) => {
+              const Icon = item.icon;
+              const targetPath = item.name === 'Dashboard' ? userDashboardPath : item.path;
 
-      {/* Footer Status */}
-      <div className="p-3 border-t border-[var(--border-color)]">
-        <div className="glass-panel p-3 rounded-xl flex items-center justify-between text-xs text-[var(--text-secondary)]">
-          <div className="flex items-center space-x-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            <span className="font-semibold text-xs text-[var(--text-primary)]">Backend Ready</span>
+              return (
+                <NavLink
+                  key={item.path}
+                  to={targetPath}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all group ${
+                      isActive
+                        ? 'bg-indigo-600/15 text-indigo-500 border border-indigo-500/30 shadow-xs'
+                        : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-indigo-500/10'
+                    }`
+                  }
+                >
+                  <div className="flex items-center space-x-2.5 min-w-0">
+                    <Icon className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" />
+                    <span className="truncate">{item.name}</span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                </NavLink>
+              );
+            })}
           </div>
-          <span className="text-[10px] text-[var(--text-secondary)] font-mono bg-slate-500/10 px-2 py-0.5 rounded-md border border-[var(--border-color)]">
-            v1.0.0
-          </span>
+
+          {/* DEVOPS Section */}
+          {devopsItems.length > 0 && (
+            <div className="space-y-1">
+              <div className="px-3 pb-2 text-[10px] font-extrabold text-[var(--text-secondary)] tracking-wider uppercase">
+                DEVOPS
+              </div>
+              {devopsItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={onClose}
+                    className={({ isActive }) =>
+                      `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all group ${
+                        isActive
+                          ? 'bg-indigo-600/15 text-indigo-500 border border-indigo-500/30 shadow-xs'
+                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-indigo-500/10'
+                      }`
+                    }
+                  >
+                    <div className="flex items-center space-x-2.5 min-w-0">
+                      <Icon className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" />
+                      <span className="truncate">{item.name}</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                  </NavLink>
+                );
+              })}
+            </div>
+          )}
+
+          {/* ADMINISTRATION Section */}
+          {adminItems.length > 0 && (
+            <div className="space-y-1">
+              <div className="px-3 pb-2 text-[10px] font-extrabold text-[var(--text-secondary)] tracking-wider uppercase">
+                ADMINISTRATION
+              </div>
+              {adminItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    onClick={onClose}
+                    className={({ isActive }) =>
+                      `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all group ${
+                        isActive
+                          ? 'bg-indigo-600/15 text-indigo-500 border border-indigo-500/30 shadow-xs'
+                          : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-indigo-500/10'
+                      }`
+                    }
+                  >
+                    <div className="flex items-center space-x-2.5 min-w-0">
+                      <Icon className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110" />
+                      <span className="truncate">{item.name}</span>
+                    </div>
+                    <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+                  </NavLink>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Settings Nav Option */}
+          <div className="pt-2 border-t border-[var(--border-color)]">
+            <NavLink
+              to="/settings"
+              onClick={onClose}
+              className={({ isActive }) =>
+                `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-all group ${
+                  isActive
+                    ? 'bg-indigo-600/15 text-indigo-500 border border-indigo-500/30 shadow-xs'
+                    : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-indigo-500/10'
+                }`
+              }
+            >
+              <div className="flex items-center space-x-2.5 min-w-0">
+                <Settings className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110 text-indigo-400" />
+                <span className="truncate">Settings & Preferences</span>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            </NavLink>
+          </div>
         </div>
-      </div>
-    </aside>
+
+        {/* Footer Profile Card */}
+        <div className="p-3 border-t border-[var(--border-color)]">
+          <NavLink
+            to="/settings"
+            onClick={onClose}
+            className="glass-panel p-3 rounded-xl flex items-center justify-between text-xs text-[var(--text-secondary)] hover:border-indigo-500/30 transition-all cursor-pointer block"
+          >
+            <div className="flex items-center space-x-2 min-w-0">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></div>
+              <div className="min-w-0">
+                <p className="font-bold text-xs text-[var(--text-primary)] truncate">
+                  {user?.fullName || 'User Profile'}
+                </p>
+                <p className="text-[10px] text-[var(--text-secondary)] truncate">
+                  {user?.email || 'Settings'}
+                </p>
+              </div>
+            </div>
+            <span className="text-[10px] text-indigo-500 font-bold uppercase bg-indigo-500/10 px-2 py-0.5 rounded-md border border-indigo-500/20 shrink-0">
+              {rawRole}
+            </span>
+          </NavLink>
+        </div>
+      </aside>
+    </>
   );
 };
+

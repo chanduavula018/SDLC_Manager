@@ -2,6 +2,7 @@ package com.enterprise.sdlcdevops.service;
 
 import com.enterprise.sdlcdevops.entity.User;
 import com.enterprise.sdlcdevops.repository.UserRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -11,9 +12,11 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public List<User> getAllUsers() {
@@ -29,18 +32,33 @@ public class UserService {
     }
 
     public User createUser(User user) {
+        if (user.getEmail() != null) {
+            user.setEmail(user.getEmail().trim().toLowerCase());
+        }
+        if (user.getPassword() != null && !user.getPassword().startsWith("$2a$")) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
         return userRepository.save(user);
     }
 
     public User updateUser(Long userId, User updatedUser) {
-
         User existingUser = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
 
         existingUser.setFullName(updatedUser.getFullName());
-        existingUser.setEmail(updatedUser.getEmail());
-        existingUser.setPassword(updatedUser.getPassword());
-        existingUser.setRole(updatedUser.getRole());
+        if (updatedUser.getEmail() != null) {
+            existingUser.setEmail(updatedUser.getEmail().trim().toLowerCase());
+        }
+        if (updatedUser.getPassword() != null && !updatedUser.getPassword().isEmpty()) {
+            if (!updatedUser.getPassword().startsWith("$2a$")) {
+                existingUser.setPassword(passwordEncoder.encode(updatedUser.getPassword()));
+            } else {
+                existingUser.setPassword(updatedUser.getPassword());
+            }
+        }
+        if (updatedUser.getRole() != null) {
+            existingUser.setRole(updatedUser.getRole());
+        }
 
         return userRepository.save(existingUser);
     }

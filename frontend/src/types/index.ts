@@ -16,6 +16,14 @@ export interface Project {
   userId: number;
 }
 
+export interface ProjectMember {
+  memberId?: number;
+  projectId: number;
+  userId: number;
+  assignedRole: string;
+  assignedDate: string;
+}
+
 export interface Requirement {
   requirementId?: number;
   title: string;
@@ -105,3 +113,21 @@ export interface ModuleStats {
   activeDeploymentsCount: number;
   usersCount: number;
 }
+
+export interface DashboardSummary {
+  totalProjects: number;
+  openRequirements: number;
+  pendingTasks: number;
+  openBugReports: number;
+  activeBuilds: number;
+  deployments: number;
+  registeredUsers: number;
+  activeEnvironments: number;
+  projectStatusDistribution: Record<string, number>;
+  taskStatusDistribution: Record<string, number>;
+  bugSeverityDistribution: Record<string, number>;
+  recentProjects: Project[];
+  openBugReportsList: BugReport[];
+  sdlcPipelineCounts: Record<string, number>;
+}
+

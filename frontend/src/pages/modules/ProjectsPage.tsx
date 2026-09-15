@@ -13,6 +13,7 @@ import {
 } from '../../services/api';
 import type {
   Project,
+  ProjectMember,
   User,
   Requirement,
   TaskItem,
@@ -29,9 +30,15 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { DetailDrawer, type DetailTab } from '../../components/common/DetailDrawer';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const ProjectsPage: React.FC = () => {
   const toast = useToast();
+  const { isAdmin, isManager, isClient } = useAuth();
+
+  const canCreate = isAdmin || isManager;
+  const canEdit = isAdmin || isManager;
+  const canDelete = isAdmin || isManager;
   const [projects, setProjects] = useState<Project[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +65,9 @@ export const ProjectsPage: React.FC = () => {
 
   // Detail Drawer State
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
+  const [selectedMemberUserId, setSelectedMemberUserId] = useState<number>(0);
+  const [addingMember, setAddingMember] = useState(false);
   const [relatedReqs, setRelatedReqs] = useState<Requirement[]>([]);
   const [relatedTasks, setRelatedTasks] = useState<TaskItem[]>([]);
   const [relatedTests, setRelatedTests] = useState<TestCase[]>([]);
@@ -129,13 +139,51 @@ export const ProjectsPage: React.FC = () => {
     setIsDeleteOpen(true);
   };
 
+  const handleFetchMembers = async (projectId: number) => {
+    try {
+      const members = await ProjectService.getMembers(projectId);
+      setProjectMembers(members);
+    } catch {
+      setProjectMembers([]);
+    }
+  };
+
+  const handleAddMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedProject?.projectId || !selectedMemberUserId || selectedMemberUserId <= 0) return;
+    setAddingMember(true);
+    try {
+      await ProjectService.addMember(selectedProject.projectId, selectedMemberUserId);
+      toast.success('Member Added', 'Project member added successfully.');
+      handleFetchMembers(selectedProject.projectId);
+      setSelectedMemberUserId(0);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Failed to add project member.';
+      toast.error('Add Member Failed', msg);
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
+  const handleRemoveMember = async (userId: number) => {
+    if (!selectedProject?.projectId) return;
+    try {
+      await ProjectService.removeMember(selectedProject.projectId, userId);
+      toast.success('Member Removed', 'Project member removed.');
+      handleFetchMembers(selectedProject.projectId);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Failed to remove member.';
+      toast.error('Remove Failed', msg);
+    }
+  };
+
   const handleViewProject = async (project: Project) => {
     setSelectedProject(project);
     if (!project.projectId) return;
 
     setLoadingDetails(true);
     try {
-      const [reqs, tasks, tests, bugs, vers, builds, envs, deps] = await Promise.all([
+      const [reqs, tasks, tests, bugs, vers, builds, envs, deps, members] = await Promise.all([
         RequirementService.getByProjectId(project.projectId).catch(() => []),
         TaskService.getByProjectId(project.projectId).catch(() => []),
         TestCaseService.getByProjectId(project.projectId).catch(() => []),
@@ -144,6 +192,7 @@ export const ProjectsPage: React.FC = () => {
         BuildService.getByProjectId(project.projectId).catch(() => []),
         EnvironmentService.getByProjectId(project.projectId).catch(() => []),
         DeploymentService.getByProjectId(project.projectId).catch(() => []),
+        ProjectService.getMembers(project.projectId).catch(() => []),
       ]);
 
       setRelatedReqs(reqs);
@@ -154,6 +203,7 @@ export const ProjectsPage: React.FC = () => {
       setRelatedBuilds(builds);
       setRelatedEnvs(envs);
       setRelatedDeps(deps);
+      setProjectMembers(members);
     } catch {
       // ignore
     } finally {
@@ -163,19 +213,30 @@ export const ProjectsPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.projectName || !formData.status || !formData.userId) {
-      setFormError('Please fill in all required fields (Project Name, Status, Owner).');
+    if (!formData.projectName?.trim() || !formData.status || !formData.userId || formData.userId <= 0) {
+      setFormError('Please fill in all required fields (Project Name, Status, Valid Owner).');
       return;
+    }
+
+    if (formData.startDate && formData.endDate) {
+      if (new Date(formData.endDate) < new Date(formData.startDate)) {
+        setFormError('End Date cannot be earlier than Start Date.');
+        return;
+      }
     }
 
     setFormSubmitting(true);
     setFormError(null);
     try {
+      const payload = {
+        ...formData,
+        projectName: formData.projectName.trim(),
+      };
       if (editingProject && editingProject.projectId) {
-        await ProjectService.update(editingProject.projectId, formData);
+        await ProjectService.update(editingProject.projectId, payload);
         toast.success('Project Updated', `Project "${formData.projectName}" has been updated.`);
       } else {
-        await ProjectService.create(formData);
+        await ProjectService.create(payload);
         toast.success('Project Created', `Project "${formData.projectName}" created successfully.`);
       }
       setIsModalOpen(false);
@@ -231,6 +292,67 @@ export const ProjectsPage: React.FC = () => {
 
   // Prepare detail drawer tabs
   const drawerTabs: DetailTab[] = [
+    {
+      id: 'members',
+      label: 'Team Members',
+      count: projectMembers.length,
+      content: (
+        <div className="space-y-4 text-xs">
+          {canEdit && (
+            <form onSubmit={handleAddMember} className="glass-panel p-3 rounded-xl flex items-center space-x-2">
+              <select
+                value={selectedMemberUserId || ''}
+                onChange={(e) => setSelectedMemberUserId(Number(e.target.value))}
+                className="flex-1 px-3 py-1.5 rounded-lg glass-input text-xs text-[var(--text-primary)] focus:outline-none"
+              >
+                <option value="">Select User to Assign...</option>
+                {users
+                  .filter((u) => u.userId !== selectedProject?.userId && !projectMembers.some((m) => m.userId === u.userId))
+                  .map((u) => (
+                    <option key={u.userId} value={u.userId}>
+                      {u.fullName} ({u.role}) - {u.email}
+                    </option>
+                  ))}
+              </select>
+              <button
+                type="submit"
+                disabled={addingMember || !selectedMemberUserId}
+                className="px-3 py-1.5 text-xs text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg font-medium transition-all disabled:opacity-50"
+              >
+                {addingMember ? 'Adding...' : 'Add Member'}
+              </button>
+            </form>
+          )}
+
+          <div className="space-y-2">
+            <h4 className="font-bold text-[var(--text-primary)] uppercase tracking-wider mb-2">Project Team Members</h4>
+            {loadingDetails ? (
+              <p className="text-xs text-[var(--text-secondary)]">Loading team members...</p>
+            ) : projectMembers.length === 0 ? (
+              <p className="text-xs text-[var(--text-secondary)]">No extra team members assigned yet.</p>
+            ) : (
+              projectMembers.map((m) => (
+                <div key={m.memberId} className="glass-panel p-3 rounded-xl flex items-center justify-between text-xs">
+                  <div>
+                    <p className="font-bold text-[var(--text-primary)]">{getUserName(m.userId)}</p>
+                    <p className="text-[11px] text-[var(--text-secondary)]">Role: {m.assignedRole} | Joined: {m.assignedDate}</p>
+                  </div>
+                  {canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => m.userId && handleRemoveMember(m.userId)}
+                      className="px-2 py-1 text-[11px] text-rose-400 hover:text-rose-300 bg-rose-500/10 rounded-lg"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      ),
+    },
     {
       id: 'requirements',
       label: 'Requirements',
@@ -380,7 +502,7 @@ export const ProjectsPage: React.FC = () => {
   return (
     <div>
       <DataTable
-        title="Project Management"
+        title={isClient ? "My Projects" : "Project Management"}
         description="Create, monitor, and manage software engineering projects across the SDLC pipeline."
         columns={columns}
         data={projects}
@@ -388,10 +510,10 @@ export const ProjectsPage: React.FC = () => {
         isLoading={loading}
         error={error}
         onRefresh={fetchData}
-        onAdd={handleOpenCreate}
+        onAdd={canCreate ? handleOpenCreate : undefined}
         onView={handleViewProject}
-        onEdit={handleOpenEdit}
-        onDelete={handleOpenDelete}
+        onEdit={canEdit ? handleOpenEdit : undefined}
+        onDelete={canDelete ? handleOpenDelete : undefined}
         searchPlaceholder="Search projects by name, status, owner..."
         statusFilterField="status"
         statusOptions={['PLANNING', 'IN_PROGRESS', 'ACTIVE', 'ON_HOLD', 'COMPLETED']}

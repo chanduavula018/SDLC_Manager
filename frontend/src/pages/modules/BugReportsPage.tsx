@@ -7,9 +7,15 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { DetailDrawer } from '../../components/common/DetailDrawer';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const BugReportsPage: React.FC = () => {
   const toast = useToast();
+  const { isAdmin, isTester, isDeveloper } = useAuth();
+
+  const canCreate = isAdmin || isTester;
+  const canEdit = isAdmin || isTester || isDeveloper;
+  const canDelete = isAdmin || isTester;
   const [bugs, setBugs] = useState<BugReport[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [testCases, setTestCases] = useState<TestCase[]>([]);
@@ -109,19 +115,23 @@ export const BugReportsPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.description || !formData.projectId || !formData.testCaseId) {
-      setFormError('Please fill in all required fields (Description, Project, Test Case).');
+    if (!formData.description?.trim() || !formData.projectId || formData.projectId <= 0 || !formData.testCaseId || formData.testCaseId <= 0) {
+      setFormError('Please select a valid Project and Test Case, and enter a Bug Description.');
       return;
     }
 
     setFormSubmitting(true);
     setFormError(null);
     try {
+      const payload = {
+        ...formData,
+        description: formData.description.trim(),
+      };
       if (editingBug && editingBug.bugId) {
-        await BugReportService.update(editingBug.bugId, formData);
+        await BugReportService.update(editingBug.bugId, payload);
         toast.success('Bug Updated', `Bug Report #${editingBug.bugId} updated.`);
       } else {
-        await BugReportService.create(formData);
+        await BugReportService.create(payload);
         toast.success('Bug Logged', `Bug report logged successfully.`);
       }
       setIsModalOpen(false);
@@ -196,10 +206,10 @@ export const BugReportsPage: React.FC = () => {
         isLoading={loading}
         error={error}
         onRefresh={fetchData}
-        onAdd={handleOpenCreate}
+        onAdd={canCreate ? handleOpenCreate : undefined}
         onView={handleViewBug}
-        onEdit={handleOpenEdit}
-        onDelete={handleOpenDelete}
+        onEdit={canEdit ? handleOpenEdit : undefined}
+        onDelete={canDelete ? handleOpenDelete : undefined}
         searchPlaceholder="Search bugs by description, severity, status..."
         statusFilterField="status"
         statusOptions={['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED']}
@@ -239,7 +249,10 @@ export const BugReportsPage: React.FC = () => {
               <select
                 required
                 value={formData.projectId || ''}
-                onChange={(e) => setFormData({ ...formData, projectId: Number(e.target.value) })}
+                onChange={(e) => {
+                  const pId = Number(e.target.value);
+                  setFormData({ ...formData, projectId: pId, testCaseId: 0 });
+                }}
                 className="w-full px-3.5 py-2 rounded-xl form-select border border-[var(--border-color)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-indigo-500"
               >
                 <option value="">Select Project...</option>
@@ -262,11 +275,13 @@ export const BugReportsPage: React.FC = () => {
                 className="w-full px-3.5 py-2 rounded-xl form-select border border-[var(--border-color)] text-sm text-[var(--text-primary)] focus:outline-none focus:border-indigo-500"
               >
                 <option value="">Select Test Case...</option>
-                {testCases.map((tc) => (
-                  <option key={tc.testCaseId} value={tc.testCaseId}>
-                    {tc.title}
-                  </option>
-                ))}
+                {testCases
+                  .filter((tc) => !formData.projectId || tc.projectId === formData.projectId)
+                  .map((tc) => (
+                    <option key={tc.testCaseId} value={tc.testCaseId}>
+                      {tc.title}
+                    </option>
+                  ))}
               </select>
             </div>
           </div>

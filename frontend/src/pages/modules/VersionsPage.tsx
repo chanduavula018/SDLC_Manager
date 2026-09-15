@@ -7,9 +7,15 @@ import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { StatusBadge } from '../../components/common/StatusBadge';
 import { DetailDrawer, type DetailTab } from '../../components/common/DetailDrawer';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../context/AuthContext';
 
 export const VersionsPage: React.FC = () => {
   const toast = useToast();
+  const { isAdmin, isManager, isDevOps } = useAuth();
+
+  const canCreate = isAdmin || isManager || isDevOps;
+  const canEdit = isAdmin || isManager || isDevOps;
+  const canDelete = isAdmin || isManager || isDevOps;
   const [versions, setVersions] = useState<Version[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,19 +125,23 @@ export const VersionsPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.versionName || !formData.projectId) {
-      setFormError('Please fill in all required fields (Version Name, Project).');
+    if (!formData.versionName?.trim() || !formData.projectId || formData.projectId <= 0) {
+      setFormError('Please select a valid Project and enter a Version Tag/Name.');
       return;
     }
 
     setFormSubmitting(true);
     setFormError(null);
     try {
+      const payload = {
+        ...formData,
+        versionName: formData.versionName.trim(),
+      };
       if (editingVersion && editingVersion.versionId) {
-        await VersionService.update(editingVersion.versionId, formData);
+        await VersionService.update(editingVersion.versionId, payload);
         toast.success('Version Updated', `Release "${formData.versionName}" updated.`);
       } else {
-        await VersionService.create(formData);
+        await VersionService.create(payload);
         toast.success('Version Created', `Release "${formData.versionName}" registered.`);
       }
       setIsModalOpen(false);
@@ -251,10 +261,10 @@ export const VersionsPage: React.FC = () => {
         isLoading={loading}
         error={error}
         onRefresh={fetchData}
-        onAdd={handleOpenCreate}
+        onAdd={canCreate ? handleOpenCreate : undefined}
         onView={handleViewVersion}
-        onEdit={handleOpenEdit}
-        onDelete={handleOpenDelete}
+        onEdit={canEdit ? handleOpenEdit : undefined}
+        onDelete={canDelete ? handleOpenDelete : undefined}
         searchPlaceholder="Search versions by tag, project, status..."
         statusFilterField="status"
         statusOptions={['PLANNING', 'BETA', 'RELEASED']}
