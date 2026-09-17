@@ -137,7 +137,7 @@ export const DetailDrawer: React.FC<DetailDrawerProps> = ({
           <div className="px-6 py-4 border-t border-[var(--border-color)] bg-slate-500/10 flex items-center justify-between text-xs text-[var(--text-secondary)]">
             <span className="flex items-center space-x-1.5">
               <ShieldCheck className="w-4 h-4 text-indigo-500" />
-              <span>NeuroForge SDLC Inspector</span>
+              <span>Enterprise SDLC &amp; DevOps Inspector</span>
             </span>
             <button
               onClick={onClose}

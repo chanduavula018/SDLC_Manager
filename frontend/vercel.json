@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://sdlc-manager.onrender.com/api/:path*"
+    }
+  ]
+}

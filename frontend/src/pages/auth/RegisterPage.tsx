@@ -124,7 +124,7 @@ export const RegisterPage: React.FC = () => {
 
         <h2 className="mt-6 text-3xl font-extrabold text-slate-900 tracking-tight">Create an Account</h2>
         <p className="mt-2 text-sm text-slate-500 font-medium">
-          Join NeuroForge to access your role-based software development workspace
+          Join Enterprise SDLC &amp; DevOps to access your role-based software development workspace
         </p>
       </div>
 

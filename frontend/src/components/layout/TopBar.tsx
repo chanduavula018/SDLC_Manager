@@ -221,7 +221,7 @@ export const TopBar: React.FC<TopBarProps> = ({ onMenuToggle }) => {
             {isSearching ? (
               <div className="py-6 text-center text-xs text-[var(--text-secondary)] flex items-center justify-center space-x-2">
                 <Activity className="w-4 h-4 animate-spin text-indigo-500" />
-                <span>Searching NeuroForge modules...</span>
+                <span>Searching Enterprise SDLC &amp; DevOps modules...</span>
               </div>
             ) : searchResults.length === 0 ? (
               <div className="py-6 text-center text-xs text-[var(--text-secondary)]">

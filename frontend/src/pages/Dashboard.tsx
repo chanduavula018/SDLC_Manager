@@ -251,7 +251,7 @@ export const Dashboard: React.FC = () => {
               <span>SDLC & DevOps Control Center</span>
             </div>
             <h1 className="text-3xl font-extrabold text-[var(--text-primary)] tracking-tight">
-              Welcome to <span className="font-black text-[var(--text-primary)]">Neuro</span><span className="text-[#4f46e5] dark:text-[#818cf8]">Forge</span>
+              Welcome to <span className="font-black text-indigo-600 dark:text-indigo-400">Enterprise SDLC &amp; DevOps</span>
             </h1>
             <p className="text-sm text-[var(--text-secondary)] mt-2 max-w-2xl leading-relaxed">
               Manage your complete software development lifecycle in one place, from planning and requirements to development, testing, and deployment.
@@ -312,7 +312,7 @@ export const Dashboard: React.FC = () => {
               <span>END-TO-END SDLC LIFECYCLE PIPELINE</span>
             </h2>
             <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-              10 Connected Modules representing the complete software lifecycle workflow from project inception to production deployment.
+              Connected Modules representing the complete software lifecycle workflow from project inception to production deployment.
             </p>
           </div>
         </div>

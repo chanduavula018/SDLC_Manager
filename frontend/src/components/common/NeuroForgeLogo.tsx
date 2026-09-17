@@ -11,7 +11,7 @@ interface NeuroForgeLogoProps {
 
 export const NeuroForgeLogo: React.FC<NeuroForgeLogoProps> = ({
   size = 'md',
-  subtitle = 'ENTERPRISE SDLC PLATFORM',
+  subtitle = 'ENTERPRISE PLATFORM',
   showSubtitle = true,
   className = '',
   onClick,
@@ -20,20 +20,23 @@ export const NeuroForgeLogo: React.FC<NeuroForgeLogoProps> = ({
     sm: {
       box: 'w-8 h-8 rounded-lg',
       icon: 'w-4 h-4',
-      title: 'text-base',
-      subtitle: 'text-[9px]',
+      title1: 'text-[11px] font-black leading-tight',
+      title2: 'text-[10px] font-black leading-tight',
+      subtitle: 'text-[8px]',
     },
     md: {
       box: 'w-10 h-10 rounded-xl',
       icon: 'w-5 h-5',
-      title: 'text-xl',
-      subtitle: 'text-[10px]',
+      title1: 'text-sm font-black leading-tight',
+      title2: 'text-xs font-black leading-tight',
+      subtitle: 'text-[9px]',
     },
     lg: {
       box: 'w-12 h-12 rounded-2xl',
       icon: 'w-6 h-6',
-      title: 'text-2xl',
-      subtitle: 'text-[11px]',
+      title1: 'text-lg font-black leading-tight',
+      title2: 'text-base font-black leading-tight',
+      subtitle: 'text-[10px]',
     },
   }[size];
 
@@ -50,24 +53,22 @@ export const NeuroForgeLogo: React.FC<NeuroForgeLogoProps> = ({
       </div>
 
       {/* Brand Text Stack */}
-      <div className="flex flex-col text-left justify-center">
-        <div className={`${sizeConfig.title} font-black tracking-tight leading-none flex items-center`}>
+      <div className="flex flex-col text-left justify-center leading-none">
+        <span
+          className={`${sizeConfig.title1} tracking-tight transition-colors text-slate-900 dark:text-white`}
+          style={{ color: 'var(--neuro-logo-color, #0F172A)' }}
+        >
+          Enterprise SDLC
+        </span>
+        <span
+          className={`${sizeConfig.title2} tracking-tight text-indigo-600 dark:text-indigo-400 transition-colors`}
+          style={{ color: 'var(--forge-logo-color, #4F46E5)' }}
+        >
+          &amp; DevOps
+        </span>
+        {showSubtitle && subtitle && (
           <span
-            className="font-black transition-colors text-slate-900 dark:text-white"
-            style={{ color: 'var(--neuro-logo-color, #0F172A)' }}
-          >
-            Neuro
-          </span>
-          <span
-            className="font-black text-indigo-600 dark:text-indigo-400 transition-colors"
-            style={{ color: 'var(--forge-logo-color, #4F46E5)' }}
-          >
-            Forge
-          </span>
-        </div>
-        {showSubtitle && (
-          <span
-            className={`${sizeConfig.subtitle} font-extrabold uppercase tracking-widest mt-1 transition-colors text-slate-600 dark:text-slate-300`}
+            className={`${sizeConfig.subtitle} font-extrabold uppercase tracking-widest mt-0.5 transition-colors text-slate-500 dark:text-slate-400`}
           >
             {subtitle}
           </span>

@@ -241,7 +241,7 @@ export const UsersPage: React.FC = () => {
           email: formData.email?.trim(),
         };
         await UserService.create(payload);
-        toast.success('User Created', `User "${formData.fullName}" added to NeuroForge.`);
+        toast.success('User Created', `User "${formData.fullName}" added to Enterprise SDLC & DevOps.`);
       }
       setIsModalOpen(false);
       fetchUsers();

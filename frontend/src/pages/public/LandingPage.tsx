@@ -146,7 +146,7 @@ export const LandingPage: React.FC = () => {
           </h1>
 
           <p className="mt-6 text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed font-normal">
-            Manage your complete software development lifecycle from project planning and requirements to testing, builds, environments, and production deployment.
+            Manage your complete software development lifecycle in one place, from planning and requirements to development, testing, and deployment.
           </p>
 
           <div className="mt-10 flex items-center justify-center">
@@ -166,7 +166,7 @@ export const LandingPage: React.FC = () => {
                 <Cpu className="w-5 h-5 text-indigo-600" />
                 <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider">End-to-End SDLC Lifecycle Pipeline</h3>
               </div>
-              <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">10 Connected Modules</span>
+              <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">Connected Modules</span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-3">
@@ -203,7 +203,7 @@ export const LandingPage: React.FC = () => {
                   One Unified Control Center for Requirements, Code, and Infrastructure
                 </h2>
                 <p className="mt-4 text-base text-slate-600 leading-relaxed">
-                  NeuroForge eliminates data silos between product managers, software engineers, QA testers, and DevOps engineers. Every requirement flows directly into development tasks, automated build tracking, test verification, and production release deployments.
+                  Enterprise SDLC &amp; DevOps eliminates data silos between product managers, software engineers, QA testers, and DevOps engineers. Every requirement flows directly into development tasks, automated build tracking, test verification, and production release deployments.
                 </p>
 
                 <div className="mt-8 space-y-3">
@@ -226,7 +226,7 @@ export const LandingPage: React.FC = () => {
                 <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-6">
                   <div className="flex items-center space-x-2">
                     <Zap className="w-5 h-5 text-indigo-400" />
-                    <span className="text-sm font-mono font-bold text-indigo-400">NEUROFORGE PLATFORM CORE</span>
+                    <span className="text-sm font-mono font-bold text-indigo-400">ENTERPRISE SDLC &amp; DEVOPS CORE</span>
                   </div>
                   <span className="text-[11px] font-mono bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-md border border-emerald-500/30">
                     SPRING BOOT ACTIVE
@@ -295,9 +295,9 @@ export const LandingPage: React.FC = () => {
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center space-x-2">
             <Layers className="w-4 h-4 text-indigo-600" />
-            <span className="font-bold text-slate-900">NeuroForge Enterprise SDLC & DevOps Platform</span>
+            <span className="font-bold text-slate-900">Enterprise SDLC &amp; DevOps Platform</span>
           </div>
-          <p>© {new Date().getFullYear()} NeuroForge Inc. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Enterprise SDLC &amp; DevOps. All rights reserved.</p>
         </div>
       </footer>
     </div>
